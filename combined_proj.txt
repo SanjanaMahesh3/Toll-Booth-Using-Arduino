@@ -1,0 +1,118 @@
+
+#include <LiquidCrystal.h> // includes the LiquidCrystal Library
+#include <Servo.h> //includes the Servo library
+
+//lcd
+LiquidCrystal lcd(1, 2, 4, 5, 6, 7); // Parameters: (rs, enable, d4, d5, d6, d7)
+int light = 0; // store the current light value
+
+//ultasonic sensor
+const int trigpin = 11; 
+const int echopin = 10;
+long duration; //Set long variable duration in between trigpin and echo
+int distanceCm; //Set distance variable
+ 
+//servo motor
+Servo gateServo; 
+int pos=0; //variable to store the servo position
+ 
+void setup() {
+lcd.begin(16,2); 
+pinMode(trigpin, OUTPUT);
+pinMode(echopin, INPUT);
+gateServo.attach(9); // Attaches pin 9 to the servo object
+// put your setup code here, to run once:
+    Serial.begin(9600); //configure serial to talk to computer
+    pinMode(13, OUTPUT); // configure digital pin 13 as an output
+    pinMode(12, OUTPUT); // configure digital pin 12 as an output
+}
+ 
+void loop() {
+  
+digitalWrite(trigpin, LOW);// semding low pulse from trigger pin
+delayMicroseconds(2); //A  delay of 2 microseconds 
+digitalWrite(trigpin, HIGH); //sending out a high pulse from the Trigger Pin
+delayMicroseconds(10); //A delay of 10 microseconds 
+digitalWrite(trigpin, LOW); //sending out a low pulse again.
+duration = pulseIn(echopin, HIGH); 
+distanceCm= duration*0.034/2; 
+  
+lcd.setCursor(0,0); 
+lcd.print("Distance: "); // Prints "Distance" on the LCD
+lcd.print(distanceCm); // Prints the distance value from the sensor
+lcd.print(" cm");
+delay(10);
+lcd.setCursor(0,1);
+delay(10);
+ 
+gateServo.write(pos); //set the servo to the position - on the first run it initializes to 0
+if (distanceCm<75.00) //which means an object is detected above the Ultrasound Sensor
+{
+  lcd.print("Gate is opening!"); //first describe the Gate action
+  if (pos <90) //if the Servo is not already upright
+  {
+    delay(1000); //delay 1.0 seconds before reacting - this mimics the response of toll gates  (for safety purposes).
+    for(pos=0; pos<=90; pos++) //gradually moves through 90 degrees
+    {
+      gateServo.write(pos);
+      delay(1000);
+    }
+  }
+  else //Servo is already upright
+  {
+    pos=90; //maintain the upright position
+    delay(1000);
+  }
+}
+else //no object is detected above the Ultrasound Sensor
+{
+  lcd.print("Gate is closed.");
+  if (pos >0) //Gate is upright and needs to close
+  {
+    delay(1000); //delay 1.0 seconds before reacting
+    for(pos=90; pos>=0; pos--) //gradually moves through 90 degrees
+    {
+      gateServo.write(pos);
+      delay(1000);
+    }
+  }
+  else //Gate is already down
+  {
+  
+    pos=0; //remain down
+    delay(1000);
+    
+  }
+}
+}
+
+
+
+
+
+
+
+
+void loop1() {
+    // put your main code here, to run repeatedly:
+    light = analogRead(A0); // read and save value from PR
+    
+    Serial.println(light); // print current light value
+ 
+    if(light > 450) { // If it is bright...
+        Serial.println("It is quite light!");
+        digitalWrite(13,LOW); //turn left LED off
+        digitalWrite(12,LOW); // turn right LED off
+    }
+    else if(light > 229 && light < 451) { // If it is average light...
+        Serial.println("It is average light!");
+       digitalWrite(13, HIGH); // turn left LED on
+       digitalWrite(12,LOW);  // turn right LED off
+    }
+    else { // If it's dark...
+        Serial.println("It is pretty dark!");
+        digitalWrite(13,HIGH); // Turn left LED on
+        digitalWrite(12,HIGH); // Turn right LED on
+    }
+    delay(1000); // don't spam the computer!
+}
